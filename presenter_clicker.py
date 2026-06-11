@@ -23,6 +23,7 @@ import cv2
 import mediapipe as mp
 from mediapipe.tasks import python as mp_python
 from mediapipe.tasks.python import vision as mp_vision
+import numpy as np
 import pyautogui
 
 # ── pyautogui settings ────────────────────────────────────────────────────────
@@ -107,46 +108,6 @@ def _rounded_rect(img, pt1, pt2, color, radius, filled=True):
     cv2.rectangle(img, (x1, y1 + r), (x2, y2 - r), color, tk)
     for cx, cy in [(x1+r, y1+r), (x2-r, y1+r), (x1+r, y2-r), (x2-r, y2-r)]:
         cv2.circle(img, (cx, cy), r, color, tk)
-
-
-# ── Face blurring ─────────────────────────────────────────────────────────────
-
-class FaceBlur:
-    """Detects and pixelates faces using the built-in Haar cascade."""
-
-    def __init__(self):
-        path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
-        self._clf   = cv2.CascadeClassifier(path)
-        self._tick  = 0
-        self._faces = []
-
-    def apply(self, frame):
-        # Run detection every 3 frames; reuse cached boxes otherwise
-        self._tick = (self._tick + 1) % 3
-        if self._tick == 0:
-            small = cv2.resize(frame, (frame.shape[1]//2, frame.shape[0]//2))
-            gray  = cv2.cvtColor(small, cv2.COLOR_BGR2GRAY)
-            result = self._clf.detectMultiScale(gray, scaleFactor=1.1,
-                                                minNeighbors=5, minSize=(40, 40))
-            self._faces = result if len(result) else []
-        faces = self._faces
-        for (x, y, w, h) in faces:
-            # Scale coordinates back to full resolution and add padding
-            x, y, w, h = x*2, y*2, w*2, h*2
-            pad = int(w * 0.20)
-            x1 = max(0, x - pad)
-            y1 = max(0, y - pad)
-            x2 = min(frame.shape[1], x + w + pad)
-            y2 = min(frame.shape[0], y + h + pad)
-            roi = frame[y1:y2, x1:x2]
-            # Pixelate: shrink then enlarge for a mosaic effect
-            block = 12
-            rh, rw = roi.shape[:2]
-            tiny  = cv2.resize(roi, (max(1, rw//block), max(1, rh//block)),
-                               interpolation=cv2.INTER_LINEAR)
-            frame[y1:y2, x1:x2] = cv2.resize(tiny, (rw, rh),
-                                              interpolation=cv2.INTER_NEAREST)
-        return frame
 
 
 # ── Hand detector ──────────────────────────────────────────────────────────────
@@ -383,7 +344,6 @@ def main():
     detector   = HandDetector()
     controller = SlideController()
     debouncer  = _GestureDebouncer()
-    face_blur  = FaceBlur()
     grabber    = FrameGrabber(cap)
 
     cv2.namedWindow("Presenter Clicker", cv2.WINDOW_NORMAL)
@@ -396,23 +356,24 @@ def main():
             continue
 
         frame = cv2.flip(frame, 1)
-        face_blur.apply(frame)
         rgb   = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         detector.process(rgb)
         lms = detector.landmarks(fw, fh)
 
+        canvas = np.zeros((fh, fw, 3), dtype=np.uint8)
+
         gesture = "NONE"
         if lms:
             gesture = debouncer.update(detector.classify(lms))
-            detector.draw_skeleton(frame, lms, gesture)
+            detector.draw_skeleton(canvas, lms, gesture)
 
         _, hold_frac = controller.update(gesture)
-        draw_hud(frame, gesture, hold_frac, controller.last_sent)
+        draw_hud(canvas, gesture, hold_frac, controller.last_sent)
 
         if not lms:
-            draw_guide(frame)
+            draw_guide(canvas)
 
-        cv2.imshow("Presenter Clicker", frame)
+        cv2.imshow("Presenter Clicker", canvas)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 

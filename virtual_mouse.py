@@ -439,10 +439,12 @@ def main():
         detector.process(rgb)
         lms = detector.landmarks(fw, fh)
 
+        canvas = np.zeros((fh, fw, 3), dtype=np.uint8)
+
         # Draw mapping zone boundary
         z1, z2 = mouse.zone_rect()
-        cv2.rectangle(frame, z1, z2, (35, 35, 60), 1)
-        cv2.putText(frame, "mapping zone",
+        cv2.rectangle(canvas, z1, z2, (35, 35, 60), 1)
+        cv2.putText(canvas, "mapping zone",
                     (z1[0] + 4, z1[1] + 14),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.35, (50, 50, 80), 1, cv2.LINE_AA)
 
@@ -454,31 +456,31 @@ def main():
             gesture = detector.classify(lms, fw)
             pinch_d = _dist(lms[4], lms[8])
             mouse.update(lms, gesture)
-            detector.draw_skeleton(frame, lms, gesture)
+            detector.draw_skeleton(canvas, lms, gesture)
 
             # Cursor dot at index tip with glow rings
             col = ACCENT.get(gesture, ACCENT["NONE"])
             if gesture == "PINCH":
-                cv2.circle(frame, lms[8], 18, _dim(col, 0.10), -1, cv2.LINE_AA)
-                cv2.circle(frame, lms[8], 12, _dim(col, 0.30), -1, cv2.LINE_AA)
-                cv2.circle(frame, lms[8],  6, col,              -1, cv2.LINE_AA)
-                cv2.circle(frame, lms[8],  2, (255, 255, 255),  -1, cv2.LINE_AA)
-                cv2.circle(frame, lms[8], 18, _dim(col, 0.60),   1, cv2.LINE_AA)
+                cv2.circle(canvas, lms[8], 18, _dim(col, 0.10), -1, cv2.LINE_AA)
+                cv2.circle(canvas, lms[8], 12, _dim(col, 0.30), -1, cv2.LINE_AA)
+                cv2.circle(canvas, lms[8],  6, col,              -1, cv2.LINE_AA)
+                cv2.circle(canvas, lms[8],  2, (255, 255, 255),  -1, cv2.LINE_AA)
+                cv2.circle(canvas, lms[8], 18, _dim(col, 0.60),   1, cv2.LINE_AA)
             else:
-                cv2.circle(frame, lms[8], 14, _dim(col, 0.12), -1, cv2.LINE_AA)
-                cv2.circle(frame, lms[8], 10, _dim(col, 0.25), -1, cv2.LINE_AA)
-                cv2.circle(frame, lms[8],  5, col,              -1, cv2.LINE_AA)
-                cv2.circle(frame, lms[8],  2, (255, 255, 255),  -1, cv2.LINE_AA)
+                cv2.circle(canvas, lms[8], 14, _dim(col, 0.12), -1, cv2.LINE_AA)
+                cv2.circle(canvas, lms[8], 10, _dim(col, 0.25), -1, cv2.LINE_AA)
+                cv2.circle(canvas, lms[8],  5, col,              -1, cv2.LINE_AA)
+                cv2.circle(canvas, lms[8],  2, (255, 255, 255),  -1, cv2.LINE_AA)
         else:
             mouse._release_drag()
 
         screen_pos = (mouse._sx, mouse._sy) if hand_vis else None
-        draw_hud(frame, gesture, mouse._dragging, pinch_d, screen_pos)
+        draw_hud(canvas, gesture, mouse._dragging, pinch_d, screen_pos)
 
         if not hand_vis:
-            draw_guide(frame)
+            draw_guide(canvas)
 
-        cv2.imshow("Virtual Mouse", frame)
+        cv2.imshow("Virtual Mouse", canvas)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
