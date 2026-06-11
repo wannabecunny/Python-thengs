@@ -418,42 +418,65 @@ class GlowCanvas:
 
     # ── Cursor drawing (called per hand) ────────────────────────────────────
 
+    @staticmethod
+    def _draw_color_sphere(frame, center, r, color):
+        cx, cy = center
+        cv2.circle(frame, (cx + 2, cy + 2), r, (0, 0, 0), -1, cv2.LINE_AA)
+        cv2.circle(frame, center, r, color, -1, cv2.LINE_AA)
+        cv2.circle(frame, center, r, _dim(color, 0.25), 1, cv2.LINE_AA)
+        hl = (cx - r // 3, cy - r // 3)
+        hl_r = max(2, r // 3)
+        bright = tuple(min(255, c + 120) for c in color)
+        cv2.circle(frame, hl, hl_r, bright, -1, cv2.LINE_AA)
+        cv2.circle(frame, (hl[0] - 1, hl[1] - 1), max(1, hl_r // 2),
+                   (255, 255, 255), -1, cv2.LINE_AA)
+
     def _draw_cursor(self, frame, gesture, cursor_pt, grabbed=False):
+        cx, cy = cursor_pt
         if gesture == "DRAW":
             col = self.current_color
-            cv2.circle(frame, cursor_pt, 16, _dim(col, 0.18), -1, cv2.LINE_AA)
-            cv2.circle(frame, cursor_pt, 10, _dim(col, 0.55), -1, cv2.LINE_AA)
-            cv2.circle(frame, cursor_pt,  5, col,             -1, cv2.LINE_AA)
-            cv2.circle(frame, cursor_pt,  2, (255, 255, 255), -1, cv2.LINE_AA)
+            cv2.circle(frame, cursor_pt, 24, _dim(col, 0.06), -1, cv2.LINE_AA)
+            cv2.circle(frame, cursor_pt, 16, _dim(col, 0.15), -1, cv2.LINE_AA)
+            cv2.circle(frame, cursor_pt, 10, _dim(col, 0.50), -1, cv2.LINE_AA)
+            cv2.circle(frame, cursor_pt,  5, col,              -1, cv2.LINE_AA)
+            cv2.circle(frame, cursor_pt, 10, _dim(col, 0.80),   1, cv2.LINE_AA)
+            cv2.circle(frame, (cx - 2, cy - 2), 2, (255, 255, 255), -1, cv2.LINE_AA)
 
         elif gesture == "ERASE":
             er = self.eraser_radius
             ea = GESTURE_ACCENT["ERASE"]
-            cv2.circle(frame, cursor_pt, er,     _dim(ea, 0.18), -1, cv2.LINE_AA)
-            cv2.circle(frame, cursor_pt, er,     ea, 2, cv2.LINE_AA)
-            cv2.circle(frame, cursor_pt, er - 5, _dim(ea, 0.4), 1, cv2.LINE_AA)
-            cv2.circle(frame, cursor_pt, 5,      ea, -1, cv2.LINE_AA)
+            cv2.circle(frame, cursor_pt, er + 8, _dim(ea, 0.06), -1, cv2.LINE_AA)
+            cv2.circle(frame, cursor_pt, er,     _dim(ea, 0.15), -1, cv2.LINE_AA)
+            cv2.ellipse(frame, cursor_pt, (er, er), 0, 200, 380, _dim(ea, 0.22), 2, cv2.LINE_AA)
+            cv2.ellipse(frame, cursor_pt, (er, er), 0,  20, 200, ea,             2, cv2.LINE_AA)
+            cv2.circle(frame, cursor_pt, er - 5, _dim(ea, 0.35), 1, cv2.LINE_AA)
+            self._draw_color_sphere(frame, cursor_pt, 6, ea)
 
         elif gesture == "GRAB":
             ga     = GESTURE_ACCENT["GRAB"]
             ga_col = ga if grabbed else _dim(ga, 0.45)
-            rc     = 18
+            rc     = 20
+            cv2.circle(frame, cursor_pt, rc + 6, _dim(ga_col, 0.08), -1, cv2.LINE_AA)
             for arm in [(-rc, 0), (rc, 0), (0, -rc), (0, rc)]:
-                end = (cursor_pt[0] + arm[0], cursor_pt[1] + arm[1])
-                cv2.line(frame, cursor_pt, end, _dim(ga_col, 0.5), 3, cv2.LINE_AA)
-                cv2.line(frame, cursor_pt, end, ga_col,            1, cv2.LINE_AA)
-            cv2.circle(frame, cursor_pt, rc, _dim(ga_col, 0.35), 2, cv2.LINE_AA)
-            cv2.circle(frame, cursor_pt, rc, ga_col,              1, cv2.LINE_AA)
-            cv2.circle(frame, cursor_pt,  5, ga_col,             -1, cv2.LINE_AA)
+                end = (cx + arm[0], cy + arm[1])
+                cv2.line(frame, cursor_pt, end, _dim(ga_col, 0.25), 5, cv2.LINE_AA)
+                cv2.line(frame, cursor_pt, end, _dim(ga_col, 0.60), 2, cv2.LINE_AA)
+                cv2.line(frame, cursor_pt, end, ga_col,             1, cv2.LINE_AA)
+            cv2.ellipse(frame, cursor_pt, (rc, rc), 0, 200, 380, _dim(ga_col, 0.25), 2, cv2.LINE_AA)
+            cv2.ellipse(frame, cursor_pt, (rc, rc), 0,  20, 200, ga_col,             1, cv2.LINE_AA)
+            self._draw_color_sphere(frame, cursor_pt, 6, ga_col)
             tag = "HOLD" if grabbed else "SEARCH"
-            cv2.putText(frame, tag,
-                        (cursor_pt[0] + rc + 4, cursor_pt[1] + 5),
+            cv2.putText(frame, tag, (cx + rc + 5, cy + 6),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.38, (0, 0, 0), 3, cv2.LINE_AA)
+            cv2.putText(frame, tag, (cx + rc + 4, cy + 5),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.38, ga_col, 1, cv2.LINE_AA)
 
         elif gesture == "COLOR_CYCLE":
             ca = GESTURE_ACCENT["COLOR_CYCLE"]
-            cv2.circle(frame, cursor_pt, 14, _dim(ca, 0.25), -1, cv2.LINE_AA)
-            cv2.circle(frame, cursor_pt, 14, ca,              2, cv2.LINE_AA)
+            cv2.circle(frame, cursor_pt, 20, _dim(ca, 0.08), -1, cv2.LINE_AA)
+            cv2.ellipse(frame, cursor_pt, (14, 14), 0, 200, 380, _dim(ca, 0.30), 2, cv2.LINE_AA)
+            cv2.ellipse(frame, cursor_pt, (14, 14), 0,  20, 200, ca,             2, cv2.LINE_AA)
+            cv2.circle(frame, cursor_pt, 14, _dim(ca, 0.70), 1, cv2.LINE_AA)
 
     # ── Full UI overlay ──────────────────────────────────────────────────────
 
@@ -464,24 +487,30 @@ class GlowCanvas:
         """
         h, w = frame.shape[:2]
 
-        # Pick highest-priority gesture across all active hands for the badge
         primary = "NONE"
         for g, _ in hand_data:
             if GESTURE_PRIORITY.index(g) < GESTURE_PRIORITY.index(primary):
                 primary = g
         accent = GESTURE_ACCENT.get(primary, (55, 55, 75))
 
-        # ── Bottom HUD panel ──────────────────────────────────────────────
+        # ── Bottom HUD panel — gradient fill + bevel ──────────────────────
         BAR_H = 76
         bar_y = h - BAR_H
 
-        panel = frame.copy()
-        cv2.rectangle(panel, (0, bar_y), (w, h), (8, 8, 18), -1)
-        cv2.addWeighted(panel, 0.88, frame, 0.12, 0, frame)
-        cv2.line(frame, (0, bar_y),     (w, bar_y),     _dim(accent, 0.40), 2)
-        cv2.line(frame, (0, bar_y - 1), (w, bar_y - 1), _dim(accent, 0.15), 3)
+        grad = np.zeros((BAR_H, w, 3), dtype=np.uint8)
+        for row in range(BAR_H):
+            t = row / max(1, BAR_H - 1)
+            bv = int(22 - t * 12)
+            grad[row, :] = (bv, bv, bv + 16)
+        frame[bar_y:h, :] = grad
 
-        # ── Mode badge ────────────────────────────────────────────────────
+        cv2.line(frame, (0, bar_y),     (w, bar_y),     _dim(accent, 0.60), 2)
+        cv2.line(frame, (0, bar_y + 1), (w, bar_y + 1), _dim(accent, 0.22), 1)
+        cv2.line(frame, (0, h - 1),     (w, h - 1),     (0, 0, 0), 1)
+        cv2.line(frame, (0, bar_y),     (0, h),          _dim(accent, 0.35), 3)
+        cv2.line(frame, (w - 1, bar_y), (w - 1, h),      _dim(accent, 0.35), 3)
+
+        # ── Mode badge — 3-D extruded ──────────────────────────────────────
         MODE_LABELS = {
             "DRAW": "DRAW", "ERASE": "ERASE",
             "GRAB": "GRAB", "COLOR_CYCLE": "COLOR", "NONE": "IDLE",
@@ -494,21 +523,48 @@ class GlowCanvas:
         by1 = bar_y + BAR_H // 2 - th // 2 - py
         bx2 = bx1 + tw + px * 2
         by2 = bar_y + BAR_H // 2 + th // 2 + py + base
-        _rounded_rect(frame, (bx1, by1), (bx2, by2), _dim(accent, 0.25), 8)
-        _rounded_rect(frame, (bx1, by1), (bx2, by2), _dim(accent, 0.70), 8, filled=False)
-        cv2.putText(frame, label, (bx1 + px, by2 - py - base),
-                    font, 0.58, (230, 230, 235), 1, cv2.LINE_AA)
 
-        # Hands active indicator (dots right of badge)
+        for i in range(4, 0, -1):
+            t = (4 - i + 1) / 4
+            _rounded_rect(frame, (bx1 + i, by1 + i), (bx2 + i, by2 + i),
+                          _dim(accent, 0.06 + 0.09 * t), 8)
+        _rounded_rect(frame, (bx1 - 3, by1 - 3), (bx2 + 3, by2 + 3),
+                      _dim(accent, 0.12), 11, filled=False)
+        _rounded_rect(frame, (bx1 - 1, by1 - 1), (bx2 + 1, by2 + 1),
+                      _dim(accent, 0.28), 9, filled=False)
+        _rounded_rect(frame, (bx1, by1), (bx2, by2), _dim(accent, 0.28), 8)
+        cv2.line(frame, (bx1 + 9, by1 + 2), (bx2 - 9, by1 + 2),
+                 tuple(min(255, int(c * 1.6 + 30)) for c in accent), 1, cv2.LINE_AA)
+        cv2.line(frame, (bx1 + 2, by1 + 9), (bx1 + 2, by2 - 9),
+                 tuple(min(255, int(c * 1.4 + 20)) for c in accent), 1, cv2.LINE_AA)
+        cv2.line(frame, (bx1 + 9, by2 - 2), (bx2 - 9, by2 - 2),
+                 _dim(accent, 0.15), 1, cv2.LINE_AA)
+        cv2.line(frame, (bx2 - 2, by1 + 9), (bx2 - 2, by2 - 9),
+                 _dim(accent, 0.15), 1, cv2.LINE_AA)
+        _rounded_rect(frame, (bx1, by1), (bx2, by2), _dim(accent, 0.85), 8, filled=False)
+        cv2.putText(frame, label, (bx1 + px + 1, by2 - py - base + 1),
+                    font, 0.58, (0, 0, 0), 2, cv2.LINE_AA)
+        cv2.putText(frame, label, (bx1 + px, by2 - py - base),
+                    font, 0.58, (240, 240, 245), 1, cv2.LINE_AA)
+
+        # ── Hand indicator orbs ───────────────────────────────────────────
         n_active = len(hand_data)
         for k in range(N_HANDS):
-            dot_x = bx2 + 12 + k * 14
+            dot_x = bx2 + 16 + k * 20
             dot_y = bar_y + BAR_H // 2
-            dot_col = (0, 200, 120) if k < n_active else (40, 40, 55)
-            cv2.circle(frame, (dot_x, dot_y), 5, dot_col, -1, cv2.LINE_AA)
+            if k < n_active:
+                dc = (0, 210, 130)
+                cv2.circle(frame, (dot_x, dot_y), 11, _dim(dc, 0.10), -1, cv2.LINE_AA)
+                cv2.circle(frame, (dot_x, dot_y),  7, _dim(dc, 0.30), -1, cv2.LINE_AA)
+                cv2.circle(frame, (dot_x, dot_y),  5, dc,              -1, cv2.LINE_AA)
+                cv2.circle(frame, (dot_x - 1, dot_y - 1), 2,
+                           (200, 255, 230), -1, cv2.LINE_AA)
+            else:
+                cv2.circle(frame, (dot_x, dot_y), 5, (28, 28, 44), -1, cv2.LINE_AA)
+                cv2.circle(frame, (dot_x, dot_y), 5, (45, 45, 65),  1, cv2.LINE_AA)
 
-        # ── Color circles ─────────────────────────────────────────────────
-        R, GAP = 13, 9
+        # ── Color spheres (Phong-lit) ─────────────────────────────────────
+        R, GAP = 14, 10
         n = len(self.COLORS)
         total_row_w = n * R * 2 + (n - 1) * GAP
         cx0 = (w - total_row_w) // 2 + R
@@ -518,34 +574,46 @@ class GlowCanvas:
             cx = cx0 + i * (R * 2 + GAP)
             ct = (cx, cy)
             if i == self.color_idx:
-                cv2.circle(frame, ct, R + 11, _dim(col, 0.08), -1)
-                cv2.circle(frame, ct, R +  7, _dim(col, 0.20), -1)
-                cv2.circle(frame, ct, R +  3, _dim(col, 0.50), -1)
-                cv2.circle(frame, ct, R +  2, (240, 240, 255), 1)
-            cv2.circle(frame, ct, R, col, -1)
-            cv2.circle(frame, ct, R, (25, 25, 35), 1)
+                cv2.circle(frame, ct, R + 13, _dim(col, 0.06), -1)
+                cv2.circle(frame, ct, R +  9, _dim(col, 0.16), -1)
+                cv2.circle(frame, ct, R +  5, _dim(col, 0.38), -1)
+                cv2.circle(frame, ct, R +  2, _dim(col, 0.70), 1)
+            self._draw_color_sphere(frame, ct, R, col)
 
-        # ── Color name ────────────────────────────────────────────────────
+        # ── Color name — tinted with drop shadow ──────────────────────────
         cname = self.current_color_name
-        (cnw, cnh), _ = cv2.getTextSize(cname, cv2.FONT_HERSHEY_SIMPLEX, 0.52, 1)
-        cv2.putText(frame, cname,
-                    (w - cnw - 14, bar_y + BAR_H // 2 + cnh // 2),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.52, (170, 170, 185), 1, cv2.LINE_AA)
+        (cnw, cnh), _ = cv2.getTextSize(cname, cv2.FONT_HERSHEY_SIMPLEX, 0.55, 1)
+        tx = w - cnw - 14
+        ty = bar_y + BAR_H // 2 + cnh // 2
+        cv2.putText(frame, cname, (tx + 1, ty + 1),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 0, 0), 2, cv2.LINE_AA)
+        cv2.putText(frame, cname, (tx, ty),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.55,
+                    tuple(min(255, int(c * 0.8 + 60)) for c in self.current_color),
+                    1, cv2.LINE_AA)
 
-        # ── Top bar ───────────────────────────────────────────────────────
-        TOP_H = 28
-        top_panel = frame.copy()
-        cv2.rectangle(top_panel, (0, 0), (w, TOP_H), (8, 8, 18), -1)
-        cv2.addWeighted(top_panel, 0.70, frame, 0.30, 0, frame)
-        cv2.line(frame, (0, TOP_H), (w, TOP_H), (30, 30, 50), 1)
+        # ── Top bar — gradient + bevel ────────────────────────────────────
+        TOP_H = 30
+        top_grad = np.zeros((TOP_H, w, 3), dtype=np.uint8)
+        for row in range(TOP_H):
+            t = row / max(1, TOP_H - 1)
+            bv = int(8 + t * 14)
+            top_grad[row, :] = (bv, bv, bv + 14)
+        frame[:TOP_H, :] = top_grad
+
+        cv2.line(frame, (0, TOP_H),     (w, TOP_H),     _dim(accent, 0.30), 1)
+        cv2.line(frame, (0, TOP_H - 1), (w, TOP_H - 1), _dim(accent, 0.12), 1)
+        cv2.line(frame, (0, 0),         (0, TOP_H),      _dim(accent, 0.50), 3)
         cv2.putText(frame, "Gesture Whiteboard",
-                    (10, 19), cv2.FONT_HERSHEY_SIMPLEX, 0.48, (80, 80, 110), 1, cv2.LINE_AA)
+                    (12, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.50, (0, 0, 0), 2, cv2.LINE_AA)
+        cv2.putText(frame, "Gesture Whiteboard",
+                    (11, 19), cv2.FONT_HERSHEY_SIMPLEX, 0.50, (115, 120, 165), 1, cv2.LINE_AA)
         hint = "C: Clear    Q: Quit"
         (hw, _), _ = cv2.getTextSize(hint, cv2.FONT_HERSHEY_SIMPLEX, 0.45, 1)
         cv2.putText(frame, hint, (w - hw - 10, 19),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.45, (80, 80, 110), 1, cv2.LINE_AA)
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.45, (80, 85, 120), 1, cv2.LINE_AA)
 
-        # ── No-hand guide ─────────────────────────────────────────────────
+        # ── No-hand guide card — drop shadow + 3-D bevel ─────────────────
         if not hand_visible:
             guide = [
                 ("Index finger only",  "DRAW",  "DRAW"),
@@ -553,26 +621,54 @@ class GlowCanvas:
                 ("Open palm (all up)", "ERASE", "ERASE"),
                 ("Fist (all curled)",  "DRAG",  "GRAB"),
             ]
-            gw = 230
-            gh = 30 + len(guide) * 26 + 10
+            gw = 250
+            gh = 34 + len(guide) * 28 + 10
             gx = (w - gw) // 2
             gy = (h - BAR_H - gh) // 2
+
+            shad = frame.copy()
+            _rounded_rect(shad, (gx + 6, gy + 6), (gx + gw + 6, gy + gh + 6), (0, 0, 0), 12)
+            cv2.addWeighted(shad, 0.50, frame, 0.50, 0, frame)
+
             bg = frame.copy()
-            _rounded_rect(bg, (gx, gy), (gx + gw, gy + gh), (10, 10, 22), 10)
-            cv2.addWeighted(bg, 0.80, frame, 0.20, 0, frame)
-            _rounded_rect(frame, (gx, gy), (gx + gw, gy + gh), (40, 40, 65), 10, filled=False)
+            _rounded_rect(bg, (gx, gy), (gx + gw, gy + gh), (16, 16, 32), 12)
+            cv2.addWeighted(bg, 0.94, frame, 0.06, 0, frame)
+
+            cv2.line(frame, (gx + 12, gy + 1),      (gx + gw - 12, gy + 1),      (62, 62, 98), 1)
+            cv2.line(frame, (gx + 1,  gy + 12),      (gx + 1,  gy + gh - 12),     (52, 52, 85), 1)
+            cv2.line(frame, (gx + 12, gy + gh - 1),  (gx + gw - 12, gy + gh - 1), (5,  5,  10), 1)
+            cv2.line(frame, (gx + gw - 1, gy + 12),  (gx + gw - 1, gy + gh - 12), (5,  5,  10), 1)
+            _rounded_rect(frame, (gx - 1, gy - 1), (gx + gw + 1, gy + gh + 1),
+                          (35, 35, 65), 13, filled=False)
+            _rounded_rect(frame, (gx, gy), (gx + gw, gy + gh),
+                          (65, 65, 105), 12, filled=False)
+
             cv2.putText(frame, "Show your hand",
-                        (gx + 20, gy + 22),
-                        cv2.FONT_HERSHEY_DUPLEX, 0.52, (160, 160, 200), 1, cv2.LINE_AA)
+                        (gx + 21, gy + 24), cv2.FONT_HERSHEY_DUPLEX, 0.52,
+                        (0, 0, 0), 2, cv2.LINE_AA)
+            cv2.putText(frame, "Show your hand",
+                        (gx + 20, gy + 23), cv2.FONT_HERSHEY_DUPLEX, 0.52,
+                        (170, 175, 220), 1, cv2.LINE_AA)
+            cv2.line(frame, (gx + 12, gy + 32), (gx + gw - 12, gy + 32), (45, 45, 75), 1)
+
             for k, (action, mode_label, gesture_key) in enumerate(guide):
-                lx = gx + 20
-                ly = gy + 48 + k * 26
+                lx = gx + 16
+                ly = gy + 50 + k * 28
                 a_col = GESTURE_ACCENT.get(gesture_key, (80, 80, 100))
-                _rounded_rect(frame, (lx, ly - 14), (lx + 58, ly + 5), _dim(a_col, 0.25), 4)
+                bw2 = 62
+                for ei in range(2, 0, -1):
+                    _rounded_rect(frame, (lx + ei, ly - 14 + ei),
+                                  (lx + bw2 + ei, ly + 6 + ei),
+                                  _dim(a_col, 0.06 + 0.08 * ei), 4)
+                _rounded_rect(frame, (lx, ly - 14), (lx + bw2, ly + 6), _dim(a_col, 0.22), 4)
+                cv2.line(frame, (lx + 5, ly - 12), (lx + bw2 - 5, ly - 12),
+                         tuple(min(255, int(c * 1.4 + 25)) for c in a_col), 1, cv2.LINE_AA)
+                _rounded_rect(frame, (lx, ly - 14), (lx + bw2, ly + 6),
+                              _dim(a_col, 0.80), 4, filled=False)
                 cv2.putText(frame, mode_label, (lx + 5, ly),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.42, _dim(a_col, 0.9), 1, cv2.LINE_AA)
-                cv2.putText(frame, action, (lx + 68, ly),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.42, (140, 140, 165), 1, cv2.LINE_AA)
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.42, (230, 232, 240), 1, cv2.LINE_AA)
+                cv2.putText(frame, action, (lx + bw2 + 10, ly),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.42, (150, 152, 180), 1, cv2.LINE_AA)
 
         # ── Cursors (one per active hand) ─────────────────────────────────
         for gesture, cursor_pt in hand_data:
